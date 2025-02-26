@@ -221,7 +221,7 @@ def main():
         file_extensions = env_vars['file_extensions']
         
         # Collect files with the specified extensions or default to .md files
-        file_paths = collect_file_paths(input_path, file_extensions=file_extensions or ['.md'])
+        file_paths = collect_file_paths(input_path, file_extensions=file_extensions or None)
         end_time = time.time()
 
         message = f"Time taken to load file paths: {end_time - start_time:.2f} seconds"
