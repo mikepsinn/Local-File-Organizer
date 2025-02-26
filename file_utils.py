@@ -105,16 +105,29 @@ def display_directory_tree(path):
     else:
         print(os.path.abspath(path))
 
-def collect_file_paths(base_path):
-    """Collect all file paths from the base directory or single file, excluding hidden files."""
+def collect_file_paths(base_path, file_extensions=None):
+    """Collect all file paths from the base directory or single file, excluding hidden files.
+    
+    Args:
+        base_path: The directory to scan for files
+        file_extensions: Optional list of file extensions to include (e.g., ['.md'])
+                        If None, all files will be included
+    """
     if os.path.isfile(base_path):
-        return [base_path]
+        # For single file, check if it matches the requested extension
+        if file_extensions is None or os.path.splitext(base_path.lower())[1] in file_extensions:
+            return [base_path]
+        else:
+            return []
     else:
         file_paths = []
         for root, _, files in os.walk(base_path):
             for file in files:
                 if not file.startswith('.'):  # Exclude hidden files
-                    file_paths.append(os.path.join(root, file))
+                    file_path = os.path.join(root, file)
+                    # Filter by extension if specified
+                    if file_extensions is None or os.path.splitext(file_path.lower())[1] in file_extensions:
+                        file_paths.append(file_path)
         return file_paths
 
 def separate_files_by_type(file_paths):

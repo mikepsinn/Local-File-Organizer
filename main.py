@@ -8,6 +8,8 @@ from file_utils import (
     read_file_data
 )
 
+from env_loader import load_env_variables  # Import the env_loader module
+
 from data_processing_common import (
     compute_operations,
     execute_operations,
@@ -135,16 +137,25 @@ def get_mode_selection():
             print("Invalid selection. Please enter 1, 2, or 3. To exit, type '/exit'.")
 
 def main():
+    # Load environment variables from .env file
+    env_vars = load_env_variables()
+    
     # Ensure NLTK data is downloaded efficiently and quietly
     ensure_nltk_data()
 
     # Start with dry run set to True
     dry_run = True
 
-    # Display silent mode explanation before asking
-    print("-" * 50)
-    print("**NOTE: Silent mode logs all outputs to a text file instead of displaying them in the terminal.")
-    silent_mode = get_yes_no("Would you like to enable silent mode? (yes/no): ")
+    # Check if silent mode is set in environment variables
+    silent_mode = env_vars['silent_mode']
+    
+    # If silent mode is not set in environment, ask the user
+    if silent_mode is None:
+        # Display silent mode explanation before asking
+        print("-" * 50)
+        print("**NOTE: Silent mode logs all outputs to a text file instead of displaying them in the terminal.")
+        silent_mode = get_yes_no("Would you like to enable silent mode? (yes/no): ")
+    
     if silent_mode:
         log_file = 'operation_log.txt'
     else:
@@ -155,8 +166,14 @@ def main():
         if not silent_mode:
             print("-" * 50)
 
-        # Get input and output paths once per directory
-        input_path = input("Enter the path of the directory you want to organize: ").strip()
+        # Check if input path is set in environment variables
+        input_path = env_vars['input_path']
+        
+        # If input path is not set in environment, ask the user
+        if not input_path:
+            # Get input and output paths once per directory
+            input_path = input("Enter the path of the directory you want to organize: ").strip()
+            
         while not os.path.exists(input_path):
             message = f"Input path {input_path} does not exist. Please enter a valid path."
             if silent_mode:
@@ -176,11 +193,16 @@ def main():
         if not silent_mode:
             print("-" * 50)
 
-        # Default output path is a folder named "organized_folder" in the same directory as the input path
-        output_path = input("Enter the path to store organized files and folders (press Enter to use 'organized_folder' in the input directory): ").strip()
+        # Check if output path is set in environment variables
+        output_path = env_vars['output_path']
+        
+        # If output path is not set in environment, ask the user
         if not output_path:
-            # Get the parent directory of the input path and append 'organized_folder'
-            output_path = os.path.join(os.path.dirname(input_path), 'organized_folder')
+            # Default output path is a folder named "organized_folder" in the same directory as the input path
+            output_path = input("Enter the path to store organized files and folders (press Enter to use 'organized_folder' in the input directory): ").strip()
+            if not output_path:
+                # Get the parent directory of the input path and append 'organized_folder'
+                output_path = os.path.join(os.path.dirname(input_path), 'organized_folder')
 
         # Confirm successful output path
         message = f"Output path successfully set to: {output_path}"
@@ -194,7 +216,12 @@ def main():
 
         # Start processing files
         start_time = time.time()
-        file_paths = collect_file_paths(input_path)
+        
+        # Check if file extensions are set in environment variables
+        file_extensions = env_vars['file_extensions']
+        
+        # Collect files with the specified extensions or default to .md files
+        file_paths = collect_file_paths(input_path, file_extensions=file_extensions or ['.md'])
         end_time = time.time()
 
         message = f"Time taken to load file paths: {end_time - start_time:.2f} seconds"
@@ -203,16 +230,25 @@ def main():
                 f.write(message + '\n')
         else:
             print(message)
-        if not silent_mode:
+            extensions_str = ", ".join(file_extensions) if file_extensions else ".md"
+            print(f"Found {len(file_paths)} files matching extensions: {extensions_str}")
             print("-" * 50)
             print("Directory tree before organizing:")
             display_directory_tree(input_path)
 
             print("*" * 50)
 
+        # Check if organization mode is set in environment variables
+        mode = env_vars['mode']
+        
         # Loop for selecting sorting methods
         while True:
-            mode = get_mode_selection()
+            # If mode is not set in environment, ask the user
+            if not mode:
+                mode = get_mode_selection()
+            else:
+                if not silent_mode:
+                    print(f"Using organization mode from .env file: {mode}")
 
             if mode == 'content':
                 # Proceed with content mode
@@ -290,7 +326,12 @@ def main():
                 print("-" * 50)
 
             # Ask user if they want to proceed
-            proceed = get_yes_no("Would you like to proceed with these changes? (yes/no): ")
+            # If running in non-interactive mode from .env, automatically proceed
+            proceed = True
+            # Only ask for confirmation if we're not using all variables from .env
+            if not all([env_vars['input_path'], env_vars['output_path'], env_vars['mode'], env_vars['file_extensions']]):
+                proceed = get_yes_no("Would you like to proceed with these changes? (yes/no): ")
+                
             if proceed:
                 # Create the output directory now
                 os.makedirs(output_path, exist_ok=True)
@@ -322,16 +363,26 @@ def main():
                 # Ask if the user wants to try another sorting method
                 another_sort = get_yes_no("Would you like to choose another sorting method? (yes/no): ")
                 if another_sort:
+                    # Reset mode to force selection again
+                    mode = None
                     continue  # Loop back to mode selection
                 else:
                     print("Operation canceled by the user.")
                     break  # Exit the sorting method loop
 
+        # If all variables were set in .env, we assume this is a one-time run and exit
+        if all([env_vars['input_path'], env_vars['output_path'], env_vars['mode']]):
+            break
+            
         # Ask if the user wants to organize another directory
         another_directory = get_yes_no("Would you like to organize another directory? (yes/no): ")
         if not another_directory:
             break  # Exit the main loop
-
+        
+        # Reset variables for next directory
+        env_vars['input_path'] = None
+        env_vars['output_path'] = None
+        env_vars['mode'] = None
 
 if __name__ == '__main__':
     main()

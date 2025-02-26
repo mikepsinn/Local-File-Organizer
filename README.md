@@ -185,6 +185,32 @@ With the environment activated and dependencies installed, run the script using:
 python main.py
 ```
 
+### 7. Using Environment Variables for Configuration (Optional)
+
+For automated or headless operation, you can configure the application using a `.env` file instead of interactive prompts:
+
+1. Create a `.env` file in the project root directory (use the provided `.env.example` as a template)
+2. Configure the following variables:
+
+```
+# Path to the directory you want to organize
+INPUT_PATH=C:/Users/YourName/Documents
+
+# Path where organized files will be stored
+OUTPUT_PATH=C:/Users/YourName/Documents/Organized
+
+# File extensions to process, comma-separated
+FILE_EXTENSIONS=md,txt,docx,pdf
+
+# Set to 'true' to enable silent mode (outputs to log file instead of console)
+SILENT_MODE=false
+
+# Organization mode to use (content, date, type)
+ORGANIZATION_MODE=content
+```
+
+When all required variables (`INPUT_PATH`, `OUTPUT_PATH`, `FILE_EXTENSIONS`, and `ORGANIZATION_MODE`) are provided in the `.env` file, the script will run automatically without user interaction.
+
 ## Notes
 
 - **SDK Models:**
